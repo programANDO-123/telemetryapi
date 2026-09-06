@@ -53,3 +53,29 @@ La primera migracion esta en `db/migrations/V1__create_telemetry_contract.sql`.
 
 El seed y las pruebas son tareas separadas del equipo. Este ADR deja documentado solamente el contrato y la migracion inicial.
 Elaboro: Jesus
+
+## seed reproducible
+
+Se agregó el archivo `db/seed/V1__seed_telemetry.sql` con datos sintéticos para tres dispositivos de prueba:
+
+- `GPS-001`
+- `GPS-002`
+- `GPS-003`
+
+El seed contiene seis lecturas de telemetría con diferentes valores de velocidad y distancia.
+
+Las inserciones utilizan `ON CONFLICT DO NOTHING` para evitar duplicados cuando el archivo se ejecuta más de una vez. Esto permite que el seed pueda ejecutarse de forma repetible en el entorno local.
+
+El seed fue probado en PostgreSQL junto con la migración `V1__create_telemetry_contract.sql`.
+
+docker compose exec -T postgres psql -U cdrl_dev -d cdrl -c "SELECT * FROM telemetry_readings ORDER BY device_id, recorded_at;"
+ reading_id |              device_id               |      recorded_at       | speed_kmh | distance_km 
+------------+--------------------------------------+------------------------+-----------+-------------
+          1 | 11111111-1111-1111-1111-111111111111 | 2026-09-01 08:00:00+00 |      0.00 |       0.000
+          2 | 11111111-1111-1111-1111-111111111111 | 2026-09-01 08:10:00+00 |     45.50 |       7.250
+          3 | 11111111-1111-1111-1111-111111111111 | 2026-09-01 08:20:00+00 |     80.75 |      13.500
+          4 | 22222222-2222-2222-2222-222222222222 | 2026-09-01 09:00:00+00 |     60.00 |      10.000
+          5 | 22222222-2222-2222-2222-222222222222 | 2026-09-01 09:15:00+00 |      0.00 |       0.000
+          6 | 33333333-3333-3333-3333-333333333333 | 2026-09-01 10:00:00+00 |    100.25 |      25.750
+(6 rows)
+Elaboro: Serafin
