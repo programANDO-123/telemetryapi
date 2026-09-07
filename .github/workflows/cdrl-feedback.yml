@@ -14,6 +14,7 @@ jobs:
     timeout-minutes: 20
 
     env:
+      POSTGRES_HOST: localhost
       POSTGRES_DB: cdrl
       POSTGRES_USER: cdrl_dev
       POSTGRES_PASSWORD: cdrl_dev_only
