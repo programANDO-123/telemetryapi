@@ -62,5 +62,5 @@ Path("artifacts/base-verify.json").write_text(json.dumps({
     "nextMilestone": "m01-data-contract"
 }, indent=2) + "\n")
 PY
-
+mvn clean test
 echo "CDRL starter base verification passed"

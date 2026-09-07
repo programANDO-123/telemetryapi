@@ -1,3 +1,4 @@
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -24,14 +25,17 @@ class TelemetryContractTest {
     @BeforeAll
     static void setUp() throws SQLException {
 
-        String url = System.getenv("DB_URL");
-        String user = System.getenv("DB_USER");
-        String password = System.getenv("DB_PASSWORD");
+        String db = System.getenv("POSTGRES_DB");
+        String user = System.getenv("POSTGRES_USER");
+        String password = System.getenv("POSTGRES_PASSWORD");
+        String port = System.getenv("POSTGRES_PORT");
 
-        if (url == null || user == null || password == null) {
+        if (db == null || user == null || password == null || port == null) {
             throw new IllegalStateException(
-                    "Faltan las variables de entorno DB_URL, DB_USER o DB_PASSWORD.");
+                    "Faltan las variables de entorno POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD o POSTGRES_PORT.");
         }
+
+        String url = "jdbc:postgresql://localhost:" + port + "/" + db;
 
         connection = DriverManager.getConnection(
                 url,
