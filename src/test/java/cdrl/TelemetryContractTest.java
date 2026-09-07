@@ -24,17 +24,14 @@ class TelemetryContractTest {
     @BeforeAll
     static void setUp() throws SQLException {
 
-        String url = System.getProperty(
-                "db.url",
-                "jdbc:postgresql://127.0.0.1:5432/cdrl");
+        String url = System.getenv("DB_URL");
+        String user = System.getenv("DB_USER");
+        String password = System.getenv("DB_PASSWORD");
 
-        String user = System.getProperty(
-                "db.user",
-                "cdrl_dev");
-
-        String password = System.getProperty(
-                "db.password",
-                "cdrl_dev_only");
+        if (url == null || user == null || password == null) {
+            throw new IllegalStateException(
+                    "Faltan las variables de entorno DB_URL, DB_USER o DB_PASSWORD.");
+        }
 
         connection = DriverManager.getConnection(
                 url,
