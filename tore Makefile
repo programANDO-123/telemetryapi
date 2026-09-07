@@ -1,0 +1,29 @@
+[1mdiff --git a/Makefile b/Makefile[m
+[1mindex f44b433..df70ec6 100644[m
+[1m--- a/Makefile[m
+[1m+++ b/Makefile[m
+[36m@@ -1,12 +1,12 @@[m
+[31m-.PHONY: setup verify run[m
+[31m-[m
+[31m-setup:[m
+[31m-	@mkdir -p artifacts evidence docs db/migrations db/seed src tests[m
+[31m-	@test -f .env.example[m
+[31m-	@echo "CDRL starter base preparada. Configura .env localmente cuando corresponda."[m
+[31m-[m
+[31m-verify:[m
+[31m-	@bash scripts/verify_base.sh[m
+[31m-[m
+[31m-run:[m
+[31m-	@docker compose up[m
+[32m+[m[32m.PHONY: setup verify run[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32msetup:[m[41m[m
+[32m+[m	[32m@mkdir -p artifacts evidence docs db/migrations db/seed src tests[m[41m[m
+[32m+[m	[32m@test -f .env.example[m[41m[m
+[32m+[m	[32m@echo "CDRL starter base preparada. Configura .env localmente cuando corresponda."[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32mverify:[m[41m[m
+[32m+[m	[32m@bash scripts/verify_base.sh[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32mrun:[m[41m[m
+[32m+[m	[32m@docker compose up[m[41m[m
