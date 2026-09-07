@@ -13,12 +13,18 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
+    env:
+      POSTGRES_DB: cdrl
+      POSTGRES_USER: cdrl_dev
+      POSTGRES_PASSWORD: cdrl_dev_only
+      POSTGRES_PORT: 5432
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup Java 21
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '21'
