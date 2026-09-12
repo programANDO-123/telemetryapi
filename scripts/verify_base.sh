@@ -16,7 +16,8 @@ docker compose up -d postgres
 echo "Waiting for PostgreSQL..."
 for i in $(seq 1 60); do
   if docker compose exec -T postgres \
-       pg_isready -q -U "$POSTGRES_USER" -d "$POSTGRES_DB"; then
+       psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT 1" >/dev/null 2>&1; then
+    echo "PostgreSQL is ready."
     break
   fi
   if [ "$i" -eq 60 ]; then
