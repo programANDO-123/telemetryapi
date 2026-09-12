@@ -1,44 +1,67 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-required_files=(
-  ".env.example"
-  "Makefile"
-  "docker-compose.yml"
-  "docs/ADR-000-starter-base.md"
-  "evidence/m01-data-contract.json"
-  ".github/workflows/cdrl-feedback.yml"
-)
+# M01 verification: levanta PostgreSQL, aplica migración y seed,
+# ejecuta los tests y emite artifacts/m01-verify.json con el resultado real.
 
-for required in "${required_files[@]}"; do
-  test -f "$required" || { echo "missing required file: $required" >&2; exit 1; }
+test -f .env || { echo "missing .env file" >&2; exit 1; }
+
+set -a
+# shellcheck disable=SC1091
+source .env
+set +a
+
+docker compose up -d postgres
+
+echo "Waiting for PostgreSQL..."
+for i in $(seq 1 60); do
+  if docker compose exec -T postgres \
+       psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT 1" >/dev/null 2>&1; then
+    echo "PostgreSQL is ready."
+    break
+  fi
+  if [ "$i" -eq 60 ]; then
+    echo "PostgreSQL did not become ready" >&2
+    docker compose logs postgres >&2
+    exit 1
+  fi
+  sleep 1
 done
 
-if command -v docker >/dev/null 2>&1; then
-  docker compose config --quiet
+docker compose exec -T postgres \
+  psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
+  < db/migrations/V1__create_telemetry_contract.sql
+
+docker compose exec -T postgres \
+  psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
+  < db/seed/V2__seed_telemetry.sql
+
+export POSTGRES_HOST=localhost
+
+log=$(mktemp)
+trap 'rm -f "$log"' EXIT
+
+status="passed"
+if ! mvn -B clean test > "$log" 2>&1; then
+  status="failed"
 fi
 
-python3 - <<'PY'
-import json
-from pathlib import Path
+cat "$log"
 
-payload = json.loads(Path("evidence/m01-data-contract.json").read_text())
-required = {"assignmentId", "commitSha", "commands", "results", "assumptions", "limitations"}
-missing = sorted(required.difference(payload))
-if missing:
-    raise SystemExit(f"missing evidence fields: {', '.join(missing)}")
-PY
+summary=$(grep "Tests run:" "$log" | tail -1 | sed -E 's/^\[INFO\] //' || true)
 
 mkdir -p artifacts
-python3 - <<'PY'
-import json
-from pathlib import Path
+cat > artifacts/m01-verify.json <<EOF
+{
+  "command": "make verify",
+  "status": "${status}",
+  "tests": "${summary}"
+}
+EOF
 
-Path("artifacts/base-verify.json").write_text(json.dumps({
-    "status": "starter_base_valid",
-    "scope": "structure_and_contract_only",
-    "nextMilestone": "m01-data-contract"
-}, indent=2) + "\n")
-PY
+if [ "$status" != "passed" ]; then
+  echo "M01 verification failed" >&2
+  exit 1
+fi
 
-echo "CDRL starter base verification passed"
+echo "M01 verification passed"
