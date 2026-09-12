@@ -1,21 +1,34 @@
 {
   "assignmentId": "m01-data-contract",
-  "commitSha": "REPLACE_AT_SUBMISSION",
+  "commitSha": "PENDING_TAG",
   "commands": [
     "make setup",
     "make verify",
     "make run"
   ],
   "results": {
-    "starterBase": "pending_team_execution"
+    "starterBase": "passed",
+    "migration": "passed",
+    "seed": "passed",
+    "tests": {
+      "total": 4,
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0,
+      "summary": "Tests run: 4, Failures: 0, Errors: 0, Skipped: 0"
+    }
   },
   "assumptions": [
-    "El equipo elegirá y documentará el lenguaje de la aplicación.",
-    "AWS Academy Learner Lab se usará solo si el servicio está habilitado.",
-    "Los datos iniciales serán sintéticos."
+    "El lenguaje y stack del proyecto se documentan en docs/ADR-002-language-and-stack.md.",
+    "El contrato de datos se documenta en docs/ADR-001-telemetry-schema.md.",
+    "Los datos iniciales son sintéticos y viven en db/seed/V2__seed_telemetry.sql.",
+    "PostgreSQL 16 se levanta localmente con Docker Compose.",
+    "AWS Academy Learner Lab no se usa en M01."
   ],
   "limitations": [
-    "La base inicial no es una implementación completa de M01.",
-    "La imagen local de DynamoDB debe fijarse y reportarse cuando el equipo la use."
+    "M01 no expone API HTTP ni endpoints.",
+    "No se calculan métricas derivadas ni se detectan eventos.",
+    "DynamoDB está declarado en docker-compose.yml pero no se levanta en make run.",
+    "make verify y make run requieren Docker funcionando en la máquina."
   ]
 }
