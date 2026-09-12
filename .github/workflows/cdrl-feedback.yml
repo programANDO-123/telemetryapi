@@ -25,6 +25,10 @@ jobs:
           java-version: '21'
           cache: maven
 
+      - name: Prepare .env for CI
+        shell: bash
+        run: cp .env.example .env
+
       - name: Verify reproducibility contract
         shell: bash
         run: |
