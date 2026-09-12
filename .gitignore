@@ -1,7 +1,7 @@
 .env
 .env.local
 
-#Java-Maven 
+#Java-Maven
 target/
 *.class
 *.jar
@@ -26,6 +26,7 @@ desktop.ini
 
 # CDRL
 artifacts/*.json
+!artifacts/m01-verify.json
 artifacts/*.xml
 artifacts/*.log
 evidence/*-local.json
