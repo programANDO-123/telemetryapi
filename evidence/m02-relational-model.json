@@ -1,0 +1,31 @@
+{
+  "assignmentId": "m02-relational-model",
+  "commitSha": "PENDING_TAG",
+  "commands": [
+    "make setup",
+    "make verify",
+    "make run"
+  ],
+  "results": {
+    "relationalModel": "passed",
+    "tests": {
+      "total": 8,
+      "passed": 8,
+      "failed": 0,
+      "skipped": 0,
+      "summary": "Tests run: 8, Failures: 0, Errors: 0, Skipped: 0"
+    }
+  },
+  "assumptions": [
+    "El modelo relacional operativo se documenta en docs/ADR-003-relational-model.md.",
+    "Los datos sintéticos de M02 viven en db/seed/V4__seed_relational.sql.",
+    "PostgreSQL 16 se levanta localmente con Docker Compose.",
+    "AWS Academy Learner Lab no se usa en M02."
+  ],
+  "limitations": [
+    "M02 no expone API HTTP ni endpoints.",
+    "No se calculan métricas derivadas ni se detectan eventos en tiempo real.",
+    "La vista driving_patterns es de solo lectura y depende de datos ya cargados.",
+    "make verify y make run requieren Docker funcionando en la máquina."
+  ]
+}

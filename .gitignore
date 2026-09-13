@@ -25,10 +25,6 @@ Thumbs.db
 desktop.ini
 
 # CDRL
-artifacts/*.json
-!artifacts/m01-verify.json
-artifacts/*.xml
-artifacts/*.log
 evidence/*-local.json
 db/data/
 docker-data/
