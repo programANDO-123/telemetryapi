@@ -1,0 +1,26 @@
+{
+  "assignmentId": "m03-access-control",
+  "commitSha": "PENDING_TAG",
+  "commands": [
+    "make setup",
+    "make verify",
+    "make run"
+  ],
+  "results": {
+    "rolesConfigured": "pending",
+    "noVersionedSecrets": "pending",
+    "tests": {
+      "total": 0,
+      "passed": 0,
+      "failed": 0,
+      "skipped": 0,
+      "summary": ""
+    }
+  },
+  "assumptions": [
+    "Pendiente"
+  ],
+  "limitations": [
+    "Pendiente"
+  ]
+}
