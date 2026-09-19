@@ -21,6 +21,7 @@ fail=0
 
 for file in $tracked; do
     [ "$file" = ".env.example" ] && continue
+    [ "$file" = "scripts/check_no_secrets.sh" ] && continue
 
     # Saltar binarios.
     if file "$file" | grep -q "binary"; then
