@@ -7,20 +7,27 @@
     "make run"
   ],
   "results": {
-    "rolesConfigured": "pending",
-    "noVersionedSecrets": "pending",
+    "rolesConfigured": "passed",
+    "noVersionedSecrets": "passed",
     "tests": {
-      "total": 0,
-      "passed": 0,
+      "total": 15,
+      "passed": 15,
       "failed": 0,
       "skipped": 0,
-      "summary": ""
+      "summary": "Tests run: 15, Failures: 0, Errors: 0, Skipped: 0"
     }
   },
   "assumptions": [
-    "Pendiente"
+    "Los 4 roles se definen en db/migrations/V5__access_control.sql.",
+    "Las contraseñas se leen de variables de entorno; nunca se versionan.",
+    "El chequeo de secretos lo realiza scripts/check_no_secrets.sh.",
+    "PostgreSQL 16 se levanta localmente con Docker Compose.",
+    "AWS Academy Learner Lab no se usa en M03."
   ],
   "limitations": [
-    "Pendiente"
+    "M03 no expone API HTTP ni endpoints.",
+    "El chequeo de secretos salta .env.example por diseño (valores sintéticos).",
+    "El chequeo de secretos no cubre binarios ni archivos fuera del árbol de git.",
+    "make verify y make run requieren Docker funcionando en la máquina."
   ]
 }
