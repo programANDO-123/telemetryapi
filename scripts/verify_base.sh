@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# M02 verification: levanta PostgreSQL, aplica migración y seed de M01 y M02,
-# ejecuta los tests y emite artifacts/m02-verify.json con el resultado real.
+# M03 verification: levanta PostgreSQL, aplica migracion y seed de M01, M02 y M03,
+# verifica ausencia de secretos, ejecuta los tests y emite artifacts/m03-verify.json
 
 test -f .env || { echo "missing .env file" >&2; exit 1; }
 
@@ -44,6 +44,17 @@ docker compose exec -T postgres \
   psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
   < db/seed/V4__seed_relational.sql
 
+docker compose exec -T postgres \
+  psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
+       -v migration_pw="$MIGRATION_ROLE_PASSWORD" \
+       -v writer_pw="$WRITER_ROLE_PASSWORD" \
+       -v reader_pw="$READER_ROLE_PASSWORD" \
+       -v operator_pw="$OPERATOR_ROLE_PASSWORD" \
+  < db/migrations/V5__access_control.sql
+
+echo "Checking for versioned secrets..."
+bash scripts/check_no_secrets.sh
+
 export POSTGRES_HOST=localhost
 
 log=$(mktemp)
@@ -59,7 +70,7 @@ cat "$log"
 summary=$(grep "Tests run:" "$log" | tail -1 | sed -E 's/^\[INFO\] //' || true)
 
 mkdir -p artifacts
-cat > artifacts/m02-verify.json <<EOF
+cat > artifacts/m03-verify.json <<EOF
 {
   "command": "make verify",
   "status": "${status}",
@@ -68,8 +79,8 @@ cat > artifacts/m02-verify.json <<EOF
 EOF
 
 if [ "$status" != "passed" ]; then
-  echo "M02 verification failed" >&2
+  echo "M03 verification failed" >&2
   exit 1
 fi
 
-echo "M02 verification passed"
+echo "M03 verification passed"
