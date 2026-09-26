@@ -1,0 +1,17 @@
+{
+  "commit": "PENDING_TAG",
+  "commands": [
+    "make setup",
+    "make verify"
+  ],
+  "selectedStore": "document",
+  "results": {
+    "tests": "pending"
+  },
+  "assumptions": [
+    "Pendiente"
+  ],
+  "limitations": [
+    "Pendiente"
+  ]
+}
