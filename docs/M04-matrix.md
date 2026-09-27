@@ -121,24 +121,6 @@ Las pruebas de `EventStoreTest` comprueban el comportamiento del almacenamiento 
 Estas pruebas permiten demostrar que la tecnología seleccionada puede ejecutar correctamente el comportamiento implementado para M04.
 No obstante, estas pruebas representan **evidencia de implementación**, no constituyen por sí mismas la justificación de la decisión arquitectónica.
 
-## Evidencia reproducible
-
-La validación de M04 se ejecutó mediante la ruta de verificación definida para el proyecto.
-La evidencia esperada incluye:
-
-* Commit SHA.
-* Comandos ejecutados.
-* Resultado de las pruebas.
-* Supuestos utilizados.
-* Limitaciones identificadas.
-* Tecnología seleccionada.
-
-La evidencia debe registrarse en:
-```text
-evidence/m04-nosql-decision.json
-```
-El archivo no debe contener credenciales, tokens, datos personales ni connection strings sensibles.
-
 ## Resultado de la verificación
 
 La verificación realizada para M04 terminó con:
