@@ -81,14 +81,15 @@ La selección responde específicamente al escenario de M04 y al equilibrio entr
 
 ## Consideración de volumen y crecimiento
 
-El escenario analizado en Semana 4 contempla aproximadamente:
+Como referencia, el escenario analizado en Semana 4 plantea un ejemplo de volumen potencial:
 **5,000 alumnos × 50 eventos diarios = 250,000 eventos diarios.**
-
-Este volumen representa un crecimiento considerable de información.
-Además, los eventos pueden contener información diferente dependiendo de la actividad que representan.
-Por estas características, un modelo documental permite mantener una estructura flexible mientras los eventos aumentan.
+Este valor se utiliza como **ejemplo muestral para analizar qué características de volumen y crecimiento podrían considerarse al seleccionar una base de datos NoSQL**, y no representa necesariamente el volumen actual del proyecto CDRL.
+Además, para la decisión se consideran las características de los datos que actualmente maneja el proyecto, así como sus posibles incrementos de volumen y futuros usos. Los eventos pueden contener información diferente dependiendo de la actividad que representan.
+Por estas características, un modelo documental permite mantener una estructura flexible mientras los eventos aumentan y pueden incorporar diferentes atributos.
 La escala por sí sola no determina la selección, ya que Column también presenta características adecuadas para grandes volúmenes.
-La selección de Document se realiza considerando conjuntamente el volumen, las consultas, la flexibilidad y la integración.
+La selección de Document se realiza considerando conjuntamente el volumen de referencia, las consultas esperadas, la flexibilidad de los datos, el crecimiento potencial y la integración con el proyecto.
+
+
 ## Consideración de concurrencia y escritura
 Los eventos representan actividad que puede generarse continuamente.
 Esto implica una carga de escritura que puede crecer conforme aumenten los usuarios y las actividades de la plataforma.
@@ -178,39 +179,6 @@ El crecimiento de eventos puede requerir posteriormente estrategias adicionales 
 ### Dependencia tecnológica
 
 El uso de dos tecnologías incrementa el conocimiento técnico requerido para mantener la solución.
-
-## Evidencia reproducible
-
-La decisión debe quedar respaldada mediante evidencia que permita reproducir el análisis sobre el mismo commit.
-El archivo esperado es:
-```text
-evidence/m04-nosql-decision.json
-```
-Debe contener información equivalente a:
-```json
-{
-  "commit": "<sha>",
-  "commands": [
-    "make setup",
-    "make verify"
-  ],
-  "selectedStore": "document",
-  "results": {
-    "tests": "passed"
-  },
-  "assumptions": [],
-  "limitations": []
-}
-```
-
-El archivo debe registrar el SHA final, comandos, resultados, supuestos, limitaciones y decisión seleccionada.
-No debe contener:
-* Tokens.
-* Credenciales.
-* Datos personales.
-* Connection strings sensibles.
-* Capturas como única evidencia.
-* Valores secretos hardcodeados.
 
 ## Evidencia de pruebas
 
