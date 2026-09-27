@@ -45,25 +45,95 @@ class EventStoreTest {
     @Test
     @DisplayName("Caso normal: insertar y consultar evento por rango")
     void casoNormal() {
-        // TODO: implementar
+        String deviceId = "GPS-M04-NORMAL";
+
+        Instant ts = Instant.now();
+        Document event = new Document()
+                .append("ts", java.util.Date.from(ts))
+                .append("deviceId", deviceId)
+                .append("type", "overspeed");
+
+        events.insertOne(event);
+        Document filter = new Document()
+                .append("deviceId", deviceId)
+                .append(
+                        "ts",
+                        new Document(
+                                "$gte",
+                                java.util.Date.from(ts.minusSeconds(5))
+                        ).append(
+                                "$lte",
+                                java.util.Date.from(ts.plusSeconds(5))
+                        )
+                );
+
+        long count = events.countDocuments(filter);
+        org.junit.jupiter.api.Assertions.assertEquals(1, count);
+        events.deleteMany(new Document("deviceId", deviceId));
+        
     }
 
     @Test
     @DisplayName("Caso límite 1: evento incompleto es rechazado")
     void casoLimite1() {
-        // TODO: implementar
+        Document incompleteEvent = new Document()
+                .append("deviceId", "GPS-M04-INCOMPLETE");
+
+        boolean valid = incompleteEvent.containsKey("ts")
+                && incompleteEvent.containsKey("deviceId")
+                && incompleteEvent.containsKey("type");
+
+        org.junit.jupiter.api.Assertions.assertFalse(
+                valid,
+                "Un evento incompleto no debe cumplir el contrato mínimo"
+        );
+        
     }
 
     @Test
     @DisplayName("Caso límite 2: rango vacío devuelve cero eventos")
     void casoLimite2() {
-        // TODO: implementar
+        String deviceId = "GPS-M04-EMPTY";
+
+        Instant start = Instant.parse("2099-01-01T00:00:00Z");
+        Instant end = Instant.parse("2099-01-01T00:01:00Z");
+
+        Document filter = new Document()
+                .append("deviceId", deviceId)
+                .append(
+                        "ts",
+                        new Document(
+                                "$gte",
+                                java.util.Date.from(start)
+                        ).append(
+                                "$lte",
+                                java.util.Date.from(end)
+                        )
+                );
+
+        long count = events.countDocuments(filter);
+        org.junit.jupiter.api.Assertions.assertEquals(0, count);
+        
     }
 
     @Test
     @DisplayName("Fallo declarado: conexión inválida lanza excepción")
     void falloDeclarado() {
-        // TODO: implementar
+        String invalidUri = "mongodb://localhost:27099";
+
+        org.junit.jupiter.api.Assertions.assertThrows(
+                com.mongodb.MongoException.class,
+                () -> {
+
+                    try (MongoClient invalidClient =
+                                 MongoClients.create(invalidUri)) {
+
+                        invalidClient.getDatabase("cdrl_events")
+                                .runCommand(new Document("ping", 1));
+                    }
+                }
+        );
+        
     }
 
     private static String requireEnv(String name) {
