@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# M03 verification: levanta PostgreSQL, aplica migracion y seed de M01, M02 y M03,
-# verifica ausencia de secretos, ejecuta los tests y emite artifacts/m03-verify.json
+# M04 verification: levanta PostgreSQL y MongoDB, aplica migraciones y seeds
+# de M01, M02 y M03, verifica ausencia de secretos, ejecuta los tests
+# y emite artifacts/m04-verify.json.
 
 test -f .env || { echo "missing .env file" >&2; exit 1; }
 
@@ -11,7 +12,7 @@ set -a
 source .env
 set +a
 
-docker compose up -d postgres
+docker compose up -d postgres mongo
 
 echo "Waiting for PostgreSQL..."
 for i in $(seq 1 60); do
@@ -23,6 +24,21 @@ for i in $(seq 1 60); do
   if [ "$i" -eq 60 ]; then
     echo "PostgreSQL did not become ready" >&2
     docker compose logs postgres >&2
+    exit 1
+  fi
+  sleep 1
+done
+
+echo "Waiting for MongoDB..."
+for i in $(seq 1 60); do
+  if docker compose exec -T mongo \
+       mongosh --quiet --eval "db.adminCommand('ping').ok" >/dev/null 2>&1; then
+    echo "MongoDB is ready."
+    break
+  fi
+  if [ "$i" -eq 60 ]; then
+    echo "MongoDB did not become ready" >&2
+    docker compose logs mongo >&2
     exit 1
   fi
   sleep 1
@@ -70,7 +86,7 @@ cat "$log"
 summary=$(grep "Tests run:" "$log" | tail -1 | sed -E 's/^\[INFO\] //' || true)
 
 mkdir -p artifacts
-cat > artifacts/m03-verify.json <<EOF
+cat > artifacts/m04-verify.json <<EOF
 {
   "command": "make verify",
   "status": "${status}",
@@ -79,8 +95,8 @@ cat > artifacts/m03-verify.json <<EOF
 EOF
 
 if [ "$status" != "passed" ]; then
-  echo "M03 verification failed" >&2
+  echo "M04 verification failed" >&2
   exit 1
 fi
 
-echo "M03 verification passed"
+echo "M04 verification passed"
