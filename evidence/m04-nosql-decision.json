@@ -6,12 +6,19 @@
   ],
   "selectedStore": "document",
   "results": {
-    "tests": "pending"
+    "tests": "passed"
   },
   "assumptions": [
-    "Pendiente"
+    "La decisión NoSQL se documenta en docs/ADR-005-nosql-decision.md.",
+    "La matriz ponderada está en docs/M04-matrix.md.",
+    "MongoDB se levanta localmente con Docker Compose (mongo:7).",
+    "Los eventos tienen la forma {_id, type, ts, deviceId}.",
+    "AWS Academy Learner Lab no se usa en M04."
   ],
   "limitations": [
-    "Pendiente"
+    "M04 no expone API HTTP ni endpoints.",
+    "MongoDB corre en Docker local; no hay despliegue en Atlas.",
+    "El fallo declarado de EventStoreTest tarda ~30s por timeout del driver.",
+    "make verify y make run requieren Docker funcionando en la máquina."
   ]
 }
