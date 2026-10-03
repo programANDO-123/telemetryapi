@@ -1,0 +1,20 @@
+{
+  "assignmentId": "m05-document-store",
+  "commit": "PENDING_TAG",
+  "commands": [
+    "make setup",
+    "make verify"
+  ],
+  "selectedStore": "document",
+  "results": {
+    "validation": "pending",
+    "indexes": "pending",
+    "tests": "pending"
+  },
+  "assumptions": [
+    "Pendiente"
+  ],
+  "limitations": [
+    "Pendiente"
+  ]
+}

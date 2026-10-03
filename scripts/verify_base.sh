@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# M04 verification: levanta PostgreSQL y MongoDB, aplica migraciones y seeds
-# de M01, M02 y M03, verifica ausencia de secretos, ejecuta los tests
-# y emite artifacts/m04-verify.json.
+# M05 verification: levanta PostgreSQL y MongoDB, aplica migraciones y seeds
+# de M01, M02 y M03, aplica el schema de MongoDB, verifica ausencia de
+# secretos, ejecuta los tests y emite artifacts/m05-verify.json.
 
 test -f .env || { echo "missing .env file" >&2; exit 1; }
 
@@ -68,6 +68,11 @@ docker compose exec -T postgres \
        -v operator_pw="$OPERATOR_ROLE_PASSWORD" \
   < db/migrations/V5__access_control.sql
 
+echo "Applying MongoDB schema..."
+docker compose exec -T mongo \
+  mongosh --quiet "$MONGO_DB" \
+  < db/mongo/schema.js
+
 echo "Checking for versioned secrets..."
 bash scripts/check_no_secrets.sh
 
@@ -86,7 +91,7 @@ cat "$log"
 summary=$(grep "Tests run:" "$log" | tail -1 | sed -E 's/^\[INFO\] //' || true)
 
 mkdir -p artifacts
-cat > artifacts/m04-verify.json <<EOF
+cat > artifacts/m05-verify.json <<EOF
 {
   "command": "make verify",
   "status": "${status}",
@@ -95,8 +100,8 @@ cat > artifacts/m04-verify.json <<EOF
 EOF
 
 if [ "$status" != "passed" ]; then
-  echo "M04 verification failed" >&2
+  echo "M05 verification failed" >&2
   exit 1
 fi
 
-echo "M04 verification passed"
+echo "M05 verification passed"
