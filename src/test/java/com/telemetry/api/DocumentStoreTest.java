@@ -1,122 +1,140 @@
 package com.telemetry.api;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.bson.Document;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.data.mongodb.test.autoconfigure.DataMongoTest;
+import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
+import org.springframework.boot.validation.autoconfigure.ValidationAutoConfiguration;
+import org.springframework.context.annotation.Import;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 
-import com.mongodb.MongoWriteException;
-import com.mongodb.client.MongoClient;
-import com.mongodb.client.MongoClients;
-import com.mongodb.client.MongoCollection;
-import com.mongodb.client.MongoDatabase;
+import com.telemetry.api.model.Event;
+import com.telemetry.api.service.EventService;
 
+import jakarta.validation.ConstraintViolationException;
+
+@DataMongoTest
+@Import(EventService.class)
+@ImportAutoConfiguration(ValidationAutoConfiguration.class)
 class DocumentStoreTest {
 
-    private static final String COLLECTION = "document_events";
-
-    private static MongoClient client;
-    private static MongoCollection<Document> events;
-
-    @BeforeAll
-    static void setUp() {
-        String uri = requireEnv("MONGO_URI");
-        String db = requireEnv("MONGO_DB");
-
-        client = MongoClients.create(uri);
-        MongoDatabase database = client.getDatabase(db);
-        events = database.getCollection(COLLECTION);
-
-        events.deleteMany(new Document());
+    @DynamicPropertySource
+    static void mongoProps(DynamicPropertyRegistry registry) {
+        registry.add("spring.data.mongodb.uri", () -> requireEnv("MONGO_URI"));
+        registry.add("spring.data.mongodb.database", () -> requireEnv("MONGO_DB"));
     }
 
-    @AfterAll
-    static void tearDown() {
-        if (client != null) {
-            client.close();
-        }
+    @Autowired
+    private EventService service;
+
+    @BeforeEach
+    void clean() {
+        service.deleteAll();
     }
 
     @Test
-    @DisplayName("Happy path: insertar y consultar evento valido por eventId")
-    void happyPath() {
-        String eventId = "M05-HAPPY-001";
+    @DisplayName("Caso normal: crear y leer evento por eventId")
+    void casoNormal() {
+        Event event = event("M05-HAPPY-001", "telemetry.created", "GPS-001", "2026-10-03T20:00:00Z");
 
-        Document event = new Document()
-                .append("eventId", eventId)
-                .append("type", "telemetry.created")
-                .append("source", "GPS-001")
-                .append("timestamp", "2026-10-03T20:00:00Z")
-                .append("payload", new Document()
-                        .append("speedKmh", 80)
-                        .append("distanceKm", 120.5));
+        service.save(event);
 
-        events.insertOne(event);
+        Optional<Event> found = service.findById("M05-HAPPY-001");
 
-        Document found = events.find(new Document("eventId", eventId)).first();
+        assertTrue(found.isPresent());
+        assertEquals("telemetry.created", found.get().getType());
+        assertEquals("GPS-001", found.get().getSource());
+    }
 
-        assertNotNull(found);
-        assertEquals(eventId, found.getString("eventId"));
-        assertEquals("telemetry.created", found.getString("type"));
-        assertEquals("GPS-001", found.getString("source"));
+    @Test
+    @DisplayName("Consulta por type y rango de timestamp usa índice declarado")
+    void consultaPorTypeYTimestamp() {
+        service.save(event("M05-RANGE-001", "telemetry.temp", "GPS-001", "2026-10-03T20:00:00Z"));
+        service.save(event("M05-RANGE-002", "telemetry.temp", "GPS-002", "2026-10-03T20:05:00Z"));
+        service.save(event("M05-RANGE-003", "telemetry.speed", "GPS-003", "2026-10-03T20:10:00Z"));
+
+        List<Event> hits = service.findByTypeInRange(
+                "telemetry.temp",
+                "2026-10-03T19:00:00Z",
+                "2026-10-03T21:00:00Z");
+
+        assertEquals(2, hits.size());
     }
 
     @Test
     @DisplayName("Duplicado: mismo eventId no se inserta dos veces")
     void duplicado() {
-        String eventId = "M05-DUPLICADO-001";
+        Event event = event("M05-DUP-001", "telemetry.created", "GPS-001", "2026-10-03T20:00:00Z");
 
-        Document event = new Document()
-                .append("eventId", eventId)
-                .append("type", "telemetry.created")
-                .append("source", "GPS-001")
-                .append("timestamp", "2026-10-03T20:01:00Z")
-                .append("payload", new Document()
-                        .append("speedKmh", 70)
-                        .append("distanceKm", 100.0));
+        service.save(event);
+        service.save(event);
 
-        events.insertOne(event);
-
-        assertThrows(MongoWriteException.class, () -> events.insertOne(event));
-
-        long count = events.countDocuments(new Document("eventId", eventId));
-
-        assertEquals(1, count);
+        assertEquals(1, service.count());
     }
 
     @Test
-    @DisplayName("Ausencia: consultar eventId inexistente devuelve cero")
+    @DisplayName("Ausencia: consultar eventId inexistente devuelve vacío")
     void ausencia() {
-        String eventId = "M05-NO-EXISTE-001";
+        Optional<Event> found = service.findById("M05-NO-EXISTE");
 
-        long count = events.countDocuments(
-                new Document("eventId", eventId)
-        );
+        assertTrue(found.isEmpty());
+    }
 
-        assertEquals(0, count);
+    @Test
+    @DisplayName("Actualización idempotente: guardar dos veces con mismo eventId no duplica")
+    void updateIdempotente() {
+        Event event = event("M05-UPD-001", "telemetry.created", "GPS-001", "2026-10-03T20:00:00Z");
+        service.save(event);
+
+        event.setType("telemetry.updated");
+        service.save(event);
+        service.save(event);
+
+        assertEquals(1, service.count());
+        assertEquals("telemetry.updated", service.findById("M05-UPD-001").get().getType());
+    }
+
+    @Test
+    @DisplayName("Eliminación idempotente: eliminar dos veces no falla")
+    void deleteIdempotente() {
+        service.save(event("M05-DEL-001", "telemetry.created", "GPS-001", "2026-10-03T20:00:00Z"));
+
+        assertTrue(service.deleteById("M05-DEL-001"));
+        assertTrue(!service.deleteById("M05-DEL-001"));
+        assertEquals(0, service.count());
     }
 
     @Test
     @DisplayName("Fallo declarado: documento sin campo requerido es rechazado")
     void falloDeclarado() {
-        Document invalidEvent = new Document()
-                .append("eventId", "M05-INVALID-001")
-                .append("type", "telemetry.created")
-                .append("source", "GPS-001")
-                .append("timestamp", "2026-10-03T20:02:00Z");
-        
-        assertThrows(MongoWriteException.class, () -> events.insertOne(invalidEvent));
+        Event invalid = new Event();
+        invalid.setEventId("M05-INVALID-001");
+        invalid.setSource("GPS-001");
+        // falta type, timestamp, payload
 
-        long count = events.countDocuments(
-                new Document("eventId", "M05-INVALID-001")
-        );
+        assertThrows(ConstraintViolationException.class, () -> service.save(invalid));
+        assertEquals(0, service.count());
+    }
 
-        assertEquals(0, count);
+    private static Event event(String eventId, String type, String source, String timestamp) {
+        return new Event(
+                eventId,
+                type,
+                source,
+                timestamp,
+                Map.of("speedKmh", 80, "distanceKm", 120.5),
+                Map.of("schemaVersion", 1, "receivedBy", "test"));
     }
 
     private static String requireEnv(String name) {
