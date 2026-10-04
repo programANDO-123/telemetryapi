@@ -4,6 +4,7 @@ import java.util.Map;
 
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -12,6 +13,9 @@ import jakarta.validation.constraints.NotNull;
 public class Event {
 
     @Id
+    private String id;
+
+    @Field("eventId")
     @NotBlank
     private String eventId;
 
@@ -40,6 +44,14 @@ public class Event {
         this.timestamp = timestamp;
         this.payload = payload;
         this.metadata = metadata;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
     }
 
     public String getEventId() {

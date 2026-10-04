@@ -12,8 +12,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.data.mongodb.test.autoconfigure.DataMongoTest;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
+import org.springframework.boot.data.mongodb.test.autoconfigure.DataMongoTest;
 import org.springframework.boot.validation.autoconfigure.ValidationAutoConfiguration;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -29,10 +29,10 @@ import jakarta.validation.ConstraintViolationException;
 @ImportAutoConfiguration(ValidationAutoConfiguration.class)
 class DocumentStoreTest {
 
-    @DynamicPropertySource
+        @DynamicPropertySource
     static void mongoProps(DynamicPropertyRegistry registry) {
-        registry.add("spring.data.mongodb.uri", () -> requireEnv("MONGO_URI"));
-        registry.add("spring.data.mongodb.database", () -> requireEnv("MONGO_DB"));
+        registry.add("spring.mongodb.uri", () -> requireEnv("MONGO_URI"));
+        registry.add("spring.mongodb.database", () -> requireEnv("MONGO_DB"));
     }
 
     @Autowired
@@ -50,7 +50,7 @@ class DocumentStoreTest {
 
         service.save(event);
 
-        Optional<Event> found = service.findById("M05-HAPPY-001");
+        Optional<Event> found = service.findByEventId("M05-HAPPY-001");
 
         assertTrue(found.isPresent());
         assertEquals("telemetry.created", found.get().getType());
@@ -86,7 +86,7 @@ class DocumentStoreTest {
     @Test
     @DisplayName("Ausencia: consultar eventId inexistente devuelve vacío")
     void ausencia() {
-        Optional<Event> found = service.findById("M05-NO-EXISTE");
+        Optional<Event> found = service.findByEventId("M05-NO-EXISTE");
 
         assertTrue(found.isEmpty());
     }
@@ -102,7 +102,7 @@ class DocumentStoreTest {
         service.save(event);
 
         assertEquals(1, service.count());
-        assertEquals("telemetry.updated", service.findById("M05-UPD-001").get().getType());
+        assertEquals("telemetry.updated", service.findByEventId("M05-UPD-001").get().getType());
     }
 
     @Test
@@ -110,8 +110,8 @@ class DocumentStoreTest {
     void deleteIdempotente() {
         service.save(event("M05-DEL-001", "telemetry.created", "GPS-001", "2026-10-03T20:00:00Z"));
 
-        assertTrue(service.deleteById("M05-DEL-001"));
-        assertTrue(!service.deleteById("M05-DEL-001"));
+        assertTrue(service.deleteByEventId("M05-DEL-001"));
+        assertTrue(!service.deleteByEventId("M05-DEL-001"));
         assertEquals(0, service.count());
     }
 

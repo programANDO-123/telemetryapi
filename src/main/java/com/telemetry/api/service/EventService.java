@@ -29,11 +29,16 @@ public class EventService {
         if (!violations.isEmpty()) {
             throw new ConstraintViolationException(violations);
         }
+
+        Optional<Event> existing = repository.findByEventId(event.getEventId());
+        if (existing.isPresent()) {
+            event.setId(existing.get().getId());
+        }
         return repository.save(event);
     }
 
-    public Optional<Event> findById(String eventId) {
-        return repository.findById(eventId);
+    public Optional<Event> findByEventId(String eventId) {
+        return repository.findByEventId(eventId);
     }
 
     public List<Event> findByTypeInRange(String type, String from, String to) {
@@ -44,9 +49,9 @@ public class EventService {
         return repository.findBySourceAndTimestampBetween(source, from, to);
     }
 
-    public boolean deleteById(String eventId) {
-        if (repository.existsById(eventId)) {
-            repository.deleteById(eventId);
+    public boolean deleteByEventId(String eventId) {
+        if (repository.existsByEventId(eventId)) {
+            repository.deleteByEventId(eventId);
             return true;
         }
         return false;
