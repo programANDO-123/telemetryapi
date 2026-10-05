@@ -1,0 +1,29 @@
+{
+  "assignmentId": "m05-document-store",
+  "commit": "PENDING_TAG",
+  "commands": [
+    "make setup",
+    "make verify"
+  ],
+  "selectedStore": "document",
+  "results": {
+    "validation": "passed",
+    "indexes": "passed",
+    "tests": "passed",
+    "testSummary": "Tests run: 26, Failures: 0, Errors: 0, Skipped: 0"
+  },
+  "assumptions": [
+    "El store seleccionado es MongoDB (document store), documentado en docs/ADR-005-nosql-decision.md.",
+    "El schema de validación y los índices viven en db/mongo/schema.js.",
+    "El CRUD se implementa en model/Event.java, repository/EventRepository.java y service/EventService.java.",
+    "La colección document_events usa eventId como campo de negocio, adicional al _id de Mongo.",
+    "MongoDB se levanta localmente con Docker Compose (mongo:7).",
+    "AWS Academy Learner Lab no se usa en M05."
+  ],
+  "limitations": [
+    "M05 no expone API HTTP ni endpoints.",
+    "El fallo declarado de EventStoreTest tarda ~30s por timeout del driver contra el puerto inválido.",
+    "MongoDB corre en Docker local; no hay despliegue en Atlas ni en AWS.",
+    "make verify y make run requieren Docker funcionando en la máquina."
+  ]
+}
