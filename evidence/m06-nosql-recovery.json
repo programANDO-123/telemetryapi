@@ -1,0 +1,19 @@
+{
+  "milestone": "m06-nosql-recovery",
+  "commit": "PENDING_TAG",
+  "commands": [
+    "make setup",
+    "make verify"
+  ],
+  "results": {
+    "evolution": "pending",
+    "audit": "pending",
+    "restore": "pending"
+  },
+  "assumptions": [
+    "Pendiente"
+  ],
+  "limitations": [
+    "Pendiente"
+  ]
+}

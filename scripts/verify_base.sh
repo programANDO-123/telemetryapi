@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# M05 verification: levanta PostgreSQL y MongoDB, aplica migraciones y seeds
-# de M01, M02 y M03, aplica el schema de MongoDB, verifica ausencia de
-# secretos, ejecuta los tests y emite artifacts/m05-verify.json.
+# M06 verification: levanta PostgreSQL y MongoDB, aplica migraciones y seeds
+# de M01 a M05, aplica el schema de MongoDB, corre la migración v1->v2,
+# verifica ausencia de secretos, ejecuta los tests, corre el restore de
+# fixture y emite artifacts/m06-verify.json.
 
 test -f .env || { echo "missing .env file" >&2; exit 1; }
 
@@ -73,6 +74,11 @@ docker compose exec -T mongo \
   mongosh --quiet "$MONGO_DB" \
   < db/mongo/schema.js
 
+echo "Applying MongoDB migration v1 -> v2..."
+docker compose exec -T mongo \
+  mongosh --quiet "$MONGO_DB" \
+  < db/mongo/migrate_v1_to_v2.js
+
 echo "Checking for versioned secrets..."
 bash scripts/check_no_secrets.sh
 
@@ -90,18 +96,25 @@ cat "$log"
 
 summary=$(grep "Tests run:" "$log" | tail -1 | sed -E 's/^\[INFO\] //' || true)
 
+echo "Running restore fixture..."
+restore_status="failed"
+if bash scripts/restore_fixture.sh > /dev/null 2>&1; then
+  restore_status="ok"
+fi
+
 mkdir -p artifacts
-cat > artifacts/m05-verify.json <<EOF
+cat > artifacts/m06-verify.json <<EOF
 {
   "command": "make verify",
   "status": "${status}",
-  "tests": "${summary}"
+  "tests": "${summary}",
+  "restore": "${restore_status}"
 }
 EOF
 
-if [ "$status" != "passed" ]; then
-  echo "M05 verification failed" >&2
+if [ "$status" != "passed" ] || [ "$restore_status" != "ok" ]; then
+  echo "M06 verification failed" >&2
   exit 1
 fi
 
-echo "M05 verification passed"
+echo "M06 verification passed"
