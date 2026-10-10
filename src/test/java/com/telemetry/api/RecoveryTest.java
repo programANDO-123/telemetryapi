@@ -1,7 +1,6 @@
 package com.telemetry.api;
 
-import java.util.Map;
-
+import org.bson.Document;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
@@ -11,9 +10,8 @@ import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.model.IndexOptions;
 import com.mongodb.client.model.Indexes;
-
-import org.bson.Document;
 
 class RecoveryTest {
 
@@ -25,13 +23,13 @@ class RecoveryTest {
     @BeforeAll
     static void setUp() {
         String uri = requireEnv("MONGO_URI");
-        String db = requireEnv("MONGO_DB");
+        String db  = requireEnv("MONGO_DB");
 
         client = MongoClients.create(uri);
         MongoDatabase database = client.getDatabase(db);
         events = database.getCollection(COLLECTION);
 
-        events.createIndex(Indexes.ascending("eventId"), new com.mongodb.client.model.IndexOptions().unique(true));
+        events.createIndex(Indexes.ascending("eventId"), new IndexOptions().unique(true));
         events.createIndex(Indexes.ascending("type", "timestamp"));
         events.createIndex(Indexes.ascending("source", "timestamp"));
     }
@@ -58,6 +56,24 @@ class RecoveryTest {
     @Test
     @DisplayName("Edge case 2: documento v1 sin schemaVersion se lee sin error")
     void documentoV1SinSchemaVersion() {
+        // TODO: implementar
+    }
+
+    @Test
+    @DisplayName("Fallo típico: índice ausente no rompe la consulta")
+    void indiceAusente() {
+        // TODO: implementar
+    }
+
+    @Test
+    @DisplayName("Fallo típico: documento incompleto es rechazado por el schema")
+    void documentoIncompleto() {
+        // TODO: implementar
+    }
+
+    @Test
+    @DisplayName("Fallo típico: fixture no contiene credenciales hardcodeadas")
+    void fixtureSinSecretos() {
         // TODO: implementar
     }
 

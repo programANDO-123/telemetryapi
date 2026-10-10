@@ -18,15 +18,23 @@ public class EventService {
 
     private final EventRepository repository;
     private final Validator validator;
+    private final AuditService auditService;
 
-    public EventService(EventRepository repository, Validator validator) {
+    public EventService(EventRepository repository, Validator validator, AuditService auditService) {
         this.repository = repository;
         this.validator = validator;
+        this.auditService = auditService;
     }
 
     public Event save(Event event) {
+        String actorId = envOr("ACTOR_ID", "system");
+        String traceId = envOr("TRACE_ID", "m06-verify");
+
         Set<ConstraintViolation<Event>> violations = validator.validate(event);
         if (!violations.isEmpty()) {
+            auditService.record(actorId, "save_event", "document_events",
+                    event != null ? event.getEventId() : null, traceId,
+                    "failed", "validation_error");
             throw new ConstraintViolationException(violations);
         }
 
@@ -34,7 +42,11 @@ public class EventService {
         if (existing.isPresent()) {
             event.setId(existing.get().getId());
         }
-        return repository.save(event);
+
+        Event saved = repository.save(event);
+        auditService.record(actorId, "save_event", "document_events",
+                event.getEventId(), traceId, "ok", null);
+        return saved;
     }
 
     public Optional<Event> findByEventId(String eventId) {
@@ -50,10 +62,17 @@ public class EventService {
     }
 
     public boolean deleteByEventId(String eventId) {
+        String actorId = envOr("ACTOR_ID", "system");
+        String traceId = envOr("TRACE_ID", "m06-verify");
+
         if (repository.existsByEventId(eventId)) {
             repository.deleteByEventId(eventId);
+            auditService.record(actorId, "delete_event", "document_events",
+                    eventId, traceId, "ok", null);
             return true;
         }
+        auditService.record(actorId, "delete_event", "document_events",
+                eventId, traceId, "failed", "not_found");
         return false;
     }
 
@@ -63,5 +82,10 @@ public class EventService {
 
     public long count() {
         return repository.count();
+    }
+
+    private static String envOr(String name, String fallback) {
+        String value = System.getenv(name);
+        return (value == null || value.isBlank()) ? fallback : value;
     }
 }
