@@ -18,7 +18,7 @@ La migración selecciona documentos sin el campo raíz y agrega el valor `2` med
 
 El fixture de pruebas incluye `metadata.schemaVersion: 1`; ese valor anidado se distingue del discriminador raíz. La actualización mostrada no elimina ni sincroniza la versión anidada.
 
-La salida de `make verify` informa que se aplicaron el esquema y los índices `eventId_1`, `type_1_timestamp_-1` y `source_1_timestamp_-1`. La migración de esa ejecución reportó `Matched: 0` y `Modified: 0`: no había documentos elegibles según su filtro. Ese resultado no demuestra por sí solo la conversión de un documento; el caso de migración se cubre en las pruebas.
+La salida de `make verify` informa que se aplicaron el esquema y los índices `eventId_1`, `type_1_timestamp_-1` y `source_1_timestamp_-1`. La migración de esta ejecución reportó `Matched: 1` y `Modified: 1`: encontró y actualizó un documento elegible. La idempotencia se verifica adicionalmente mediante la prueba `migracionRepetida`.
 
 ## Auditoría operativa
 
@@ -43,11 +43,11 @@ La prueba de restauración parcial inserta uno de dos documentos esperados y det
 
 | Métrica | Definición y cálculo en M06 | Resultado disponible |
 | --- | --- | --- |
-| RPO | El RPO temporal expresa la ventana de datos que puede perderse respecto del último punto recuperable. El script usa la etiqueta RPO para `3 - before`, que cuenta registros ausentes antes de restaurar. | Si el borrado elimina todo el fixture, el cálculo produce 3 registros ausentes. El log compartido no muestra el valor medido ni permite determinar un RPO temporal. |
-| RTO | El script calcula `end - start` en segundos alrededor de la reinserción. Es una medición parcial del tiempo de recuperación. | El log no muestra el valor; la duración de Maven no equivale al RTO. |
-| SLO | Objetivo temporal del ejercicio: RTO de reinserción menor o igual a 5 segundos. El script imprime `met` o `not_met`. | El umbral está definido, pero el log no muestra su evaluación. La aceptación también exige recuperar los tres registros. |
+| RPO | El RPO temporal expresa la ventana de datos que puede perderse respecto del último punto recuperable. El script usa la etiqueta RPO para `3 - before`, que cuenta registros ausentes antes de restaurar. | 3 registros ausentes durante la falla (`3 - 0`). No se midió un RPO temporal. |
+| RTO | El script calcula `end - start` en segundos alrededor de la reinserción. Es una medición parcial del tiempo de recuperación. | 1 segundo de reinserción. La duración de Maven no equivale al RTO. |
+| SLO | Objetivo temporal del ejercicio: RTO de reinserción menor o igual a 5 segundos. El script imprime `met` o `not_met`. | Cumplido en esta ejecución: `met`, porque `1 <= 5`. También se recuperaron los tres registros esperados. |
 
-La pérdida residual se calcula como `3 - after` y debe ser cero al recuperar el fixture completo. Esta cantidad es distinta de los registros ausentes durante la falla. La medición con `date +%s` tiene resolución de segundos y no incluye la detección de la falla ni la consulta de verificación posterior.
+La ejecución registró `before = 0` y `after = 3`. La pérdida residual fue de cero registros (`3 - 3`), con recuperación de los tres identificadores esperados. Esta cantidad es distinta de los tres registros ausentes durante la falla. La medición con `date +%s` tiene resolución de segundos y no incluye la detección de la falla ni la consulta de verificación posterior.
 
 ## Pruebas
 
@@ -70,21 +70,32 @@ Las siete pruebas de recuperación cubren lectura de un fixture insertado, migra
 
 ## Evidencia
 
-La ejecución proporcionada terminó el 11 de octubre de 2026 a las 15:03:39, con zona horaria UTC−06:00. La salida contiene:
+La fase de pruebas de la ejecución proporcionada terminó el 11 de octubre de 2026 a las 16:36:31, con zona horaria UTC−06:00. Después se ejecutó el restore del fixture. La salida contiene:
 
 ```text
 Schema and indexes applied to document_events collection
-Matched: 0
-Modified: 0
+Matched: 1
+Modified: 1
 Migration v1 to v2 completed
 No versioned secrets detected
 Tests run: 37, Failures: 0, Errors: 0, Skipped: 0
 BUILD SUCCESS
 Running restore fixture...
+>> Step 1: Falla controlada (borrando fixture)
+>> Step 2: Restore (reinsertando fixture)
+>> Step 3: Verificación
+>> Step 4: Reporte
+Registros esperados: 3
+Registros antes del restore: 0
+Registros después del restore: 3
+RPO (registros perdidos durante la falla): 3
+RTO (segundos de recuperación): 1
+SLO (<= 5s): met
+restore: ok
 M06 verification passed
 ```
 
-Estos mensajes acreditan el resultado exitoso reportado por la verificación. No incluyen los conteos del restore ni los valores de RPO, RTO y SLO. Para completar la evidencia cuantitativa se debe conservar la salida del script con `before`, `after`, duración y evaluación del umbral.
+Estos mensajes acreditan 37 pruebas aprobadas, la actualización de un documento durante la migración y la recuperación completa del fixture. La salida del script muestra los conteos antes y después, tres registros ausentes durante la falla, un segundo de reinserción y cumplimiento del objetivo de hasta cinco segundos. La pérdida residual después del restore fue de cero registros.
 
 ## Límites conocidos
 
@@ -99,6 +110,6 @@ Estos mensajes acreditan el resultado exitoso reportado por la verificación. No
 
 ## Conclusión
 
-La evidencia de M06 muestra una verificación exitosa con 37 pruebas aprobadas y un flujo que reporta ejecución de restore. Los casos presentados cubren evolución mediante `schemaVersion`, consultas de auditoría y detección de recuperación parcial.
+La evidencia de M06 muestra una verificación exitosa con 37 pruebas aprobadas, un documento actualizado por la migración y un restore completo de los tres registros esperados. Los casos presentados cubren evolución mediante `schemaVersion`, consultas de auditoría y detección de recuperación parcial.
 
-El objetivo de reinserción es de hasta 5 segundos y la recuperación completa exige los tres registros esperados. La salida compartida no permite declarar valores medidos de RPO o RTO ni confirmar el cumplimiento del SLO; esos resultados deben incorporarse desde la salida del script. Las garantías documentadas se limitan al entorno de pruebas y al fixture sintético.
+Durante la falla faltaron tres registros, valor etiquetado como RPO por el script. La reinserción tardó un segundo y cumplió el SLO de hasta cinco segundos. Tras el restore no quedaron registros faltantes del fixture. Estos resultados corresponden a esta ejecución; las garantías documentadas se limitan al entorno de pruebas y al fixture sintético, y no establecen un RPO temporal ni un tiempo de recuperación completo del servicio.

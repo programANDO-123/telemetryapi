@@ -98,7 +98,7 @@ summary=$(grep "Tests run:" "$log" | tail -1 | sed -E 's/^\[INFO\] //' || true)
 
 echo "Running restore fixture..."
 restore_status="failed"
-if bash scripts/restore_fixture.sh > /dev/null 2>&1; then
+if bash scripts/restore_fixture.sh; then
   restore_status="ok"
 fi
 
