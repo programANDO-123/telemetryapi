@@ -33,6 +33,12 @@ public class Event {
 
     private Map<String, Object> metadata;
 
+    private Integer schemaVersion;
+
+    private String firmwareVersion;
+
+    private Double qualityScore;
+
     public Event() {
     }
 
@@ -100,5 +106,29 @@ public class Event {
 
     public void setMetadata(Map<String, Object> metadata) {
         this.metadata = metadata;
+    }
+
+    public Integer getSchemaVersion() {
+        return schemaVersion;
+    }
+
+    public void setSchemaVersion(Integer schemaVersion) {
+        this.schemaVersion = schemaVersion;
+    }
+
+    public String getFirmwareVersion() {
+        return firmwareVersion;
+    }
+
+    public void setFirmwareVersion(String firmwareVersion) {
+        this.firmwareVersion = firmwareVersion;
+    }
+
+    public Double getQualityScore() {
+        return qualityScore;
+    }
+
+    public void setQualityScore(Double qualityScore) {
+        this.qualityScore = qualityScore;
     }
 }

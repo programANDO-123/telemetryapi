@@ -1,5 +1,5 @@
-// Schema e indices del almacen documental de eventos (M05).
-// Se aplica sobre la base ya seleccionada por mongosh.
+// Schema e indices del almacen documental de eventos.
+// Acepta documentos v1 (sin schemaVersion) y v2 (con schemaVersion = 2).
 
 const validator = {
   $jsonSchema: {
@@ -17,7 +17,10 @@ const validator = {
           schemaVersion: { bsonType: "int" },
           receivedBy:    { bsonType: "string" }
         }
-      }
+      },
+      schemaVersion:   { bsonType: ["int", "null"] },
+      firmwareVersion: { bsonType: ["string", "null"] },
+      qualityScore:    { bsonType: ["double", "int", "null"] }
     }
   }
 };
@@ -39,7 +42,7 @@ if (existing.includes("document_events")) {
   });
 }
 
-// Indices declarados para las consultas del ADR.
+// Indices declarados.
 db.document_events.createIndex({ eventId: 1 }, { unique: true });
 db.document_events.createIndex({ type: 1, timestamp: -1 });
 db.document_events.createIndex({ source: 1, timestamp: -1 });

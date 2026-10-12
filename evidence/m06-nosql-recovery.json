@@ -1,0 +1,35 @@
+{
+  "milestone": "m06-nosql-recovery",
+  "commit": "PENDING_TAG",
+  "commands": [
+    "make setup",
+    "make verify"
+  ],
+  "results": {
+    "evolution": "passed",
+    "audit": "passed",
+    "restore": "passed",
+    "testSummary": "Tests run: 37, Failures: 0, Errors: 0, Skipped: 0",
+    "restoreMetrics": {
+      "rpoRegistrosPerdidos": 3,
+      "rtoSegundos": 1,
+      "sloStatus": "met",
+      "sloUmbral": 5
+    }
+  },
+  "assumptions": [
+    "Los documentos v1 (sin schemaVersion) siguen siendo legibles; v2 agrega firmwareVersion y qualityScore como opcionales.",
+    "La migración v1->v2 es idempotente: correrla dos veces no duplica ni daña.",
+    "audit_log registra actorId, action, entity, entityId, timestamp, traceId, result y reason, sin secretos.",
+    "El fixture de restore son 3 documentos sintéticos RESTORE-FIX-*.",
+    "MongoDB se levanta localmente con Docker Compose (mongo:7).",
+    "AWS Academy Learner Lab no se usa en M06."
+  ],
+  "limitations": [
+    "M06 no expone API HTTP ni endpoints.",
+    "El SLO declarado es <= 5 segundos para el restore local; no aplica a producción real.",
+    "El fallo declarado de EventStoreTest tarda ~30s por timeout del driver contra el puerto inválido.",
+    "MongoDB corre en Docker local; no hay despliegue en Atlas ni en AWS.",
+    "make verify y make run requieren Docker funcionando en la máquina."
+  ]
+}
