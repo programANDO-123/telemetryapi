@@ -1,0 +1,19 @@
+{
+  "milestone": "m07-document-versioning",
+  "commit": "PENDING_TAG",
+  "commands": [
+    "make setup",
+    "make verify"
+  ],
+  "results": {
+    "migration": "pending",
+    "rollback": "pending",
+    "tests": "pending"
+  },
+  "assumptions": [
+    "Pendiente"
+  ],
+  "limitations": [
+    "Pendiente"
+  ]
+}
