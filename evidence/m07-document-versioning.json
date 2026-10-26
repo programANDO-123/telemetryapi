@@ -6,14 +6,22 @@
     "make verify"
   ],
   "results": {
-    "migration": "pending",
-    "rollback": "pending",
-    "tests": "pending"
+    "migration": "passed",
+    "rollback": "passed",
+    "tests": "passed",
+    "testSummary": "Tests run: 41, Failures: 0, Errors: 0, Skipped: 0"
   },
   "assumptions": [
-    "Pendiente"
+    "Los documentos v1 (sin schemaVersion) se siguen leyendo sin romperse.",
+    "La migración v1->v2 es idempotente y se prueba en el pipeline de verificación.",
+    "El rollback v2->v1 revierte a la estructura original sin corromper datos.",
+    "Los tests de M01-M06 se mantienen intactos y en verde.",
+    "MongoDB corre en Docker local y AWS no se usa en M07."
   ],
   "limitations": [
-    "Pendiente"
+    "M07 no expone API HTTP ni endpoints.",
+    "No se prueba concurrencia masiva, solo idempotencia y compatibilidad.",
+    "El entorno es local (Docker Compose); no hay despliegue en cloud.",
+    "make verify y make run requieren Docker funcionando."
   ]
 }
