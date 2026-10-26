@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# M06 verification: levanta PostgreSQL y MongoDB, aplica migraciones y seeds
-# de M01 a M05, aplica el schema de MongoDB, corre la migración v1->v2,
-# verifica ausencia de secretos, ejecuta los tests, corre el restore de
-# fixture y emite artifacts/m06-verify.json.
+# M07 verification: levanta PostgreSQL y MongoDB, aplica migraciones y seeds
+# de M01 a M05, aplica schema de MongoDB, prueba ciclo v1 -> v2 -> v1 -> v2,
+# verifica ausencia de secretos, ejecuta tests, corre restore y emite artifacts/m07-verify.json.
 
 test -f .env || { echo "missing .env file" >&2; exit 1; }
 
@@ -45,22 +44,19 @@ for i in $(seq 1 60); do
   sleep 1
 done
 
+# --- PostgreSQL M01-M05 ---
 docker compose exec -T postgres \
   psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
   < db/migrations/V1__create_telemetry_contract.sql
-
 docker compose exec -T postgres \
   psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
   < db/seed/V2__seed_telemetry.sql
-
 docker compose exec -T postgres \
   psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
   < db/migrations/V3__relational_model.sql
-
 docker compose exec -T postgres \
   psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
   < db/seed/V4__seed_relational.sql
-
 docker compose exec -T postgres \
   psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
        -v migration_pw="$MIGRATION_ROLE_PASSWORD" \
@@ -69,19 +65,63 @@ docker compose exec -T postgres \
        -v operator_pw="$OPERATOR_ROLE_PASSWORD" \
   < db/migrations/V5__access_control.sql
 
+# --- MongoDB schema ---
 echo "Applying MongoDB schema..."
 docker compose exec -T mongo \
   mongosh --quiet "$MONGO_DB" \
   < db/mongo/schema.js
 
-echo "Applying MongoDB migration v1 -> v2..."
-docker compose exec -T mongo \
-  mongosh --quiet "$MONGO_DB" \
-  < db/mongo/migrate_v1_to_v2.js
+# --- M07: ciclo de migración y rollback ---
+echo "M07: Inserting v1 synthetic document..."
+docker compose exec -T mongo mongosh --quiet "$MONGO_DB" --eval '
+  db.document_events.deleteMany({ eventId: "M07-V1-001" });
+  db.document_events.insertOne({
+    eventId: "M07-V1-001",
+    type: "telemetry.test",
+    source: "synthetic",
+    timestamp: "2026-10-24T00:00:00Z",
+    payload: { note: "v1" }
+  });
+  print("inserted v1 document");
+'
 
+echo "M07: Applying migration v1 -> v2..."
+docker compose exec -T mongo mongosh --quiet "$MONGO_DB" < db/mongo/migrate_v1_to_v2.js
+
+echo "M07: Verifying v2 document exists..."
+v2count=$(docker compose exec -T mongo mongosh --quiet "$MONGO_DB" --eval 'print(db.document_events.countDocuments({ eventId: "M07-V1-001", schemaVersion: 2 }));' | tr -d '\r')
+if [ "$v2count" != "1" ]; then
+  echo "M07 ERROR: migration to v2 did not produce expected document" >&2
+  exit 1
+fi
+
+echo "M07: Applying rollback v2 -> v1..."
+docker compose exec -T mongo mongosh --quiet "$MONGO_DB" < db/mongo/rollback_v2_to_v1.js
+
+echo "M07: Verifying document returned to v1..."
+v1count=$(docker compose exec -T mongo mongosh --quiet "$MONGO_DB" --eval 'print(db.document_events.countDocuments({ eventId: "M07-V1-001", schemaVersion: { $exists: false } }));' | tr -d '\r')
+if [ "$v1count" != "1" ]; then
+  echo "M07 ERROR: rollback to v1 did not restore document" >&2
+  exit 1
+fi
+
+echo "M07: Re-applying migration (idempotence check)..."
+docker compose exec -T mongo mongosh --quiet "$MONGO_DB" < db/mongo/migrate_v1_to_v2.js
+
+v2count2=$(docker compose exec -T mongo mongosh --quiet "$MONGO_DB" --eval 'print(db.document_events.countDocuments({ eventId: "M07-V1-001", schemaVersion: 2 }));' | tr -d '\r')
+if [ "$v2count2" != "1" ]; then
+  echo "M07 ERROR: second migration did not produce expected result" >&2
+  exit 1
+fi
+
+echo "M07: Cleaning up synthetic document..."
+docker compose exec -T mongo mongosh --quiet "$MONGO_DB" --eval 'db.document_events.deleteMany({ eventId: "M07-V1-001" });'
+
+# --- Secret scan ---
 echo "Checking for versioned secrets..."
 bash scripts/check_no_secrets.sh
 
+# --- Maven tests ---
 export POSTGRES_HOST=localhost
 
 log=$(mktemp)
@@ -96,14 +136,15 @@ cat "$log"
 
 summary=$(grep "Tests run:" "$log" | tail -1 | sed -E 's/^\[INFO\] //' || true)
 
+# --- M06 restore (se conserva) ---
 echo "Running restore fixture..."
 restore_status="failed"
-if bash scripts/restore_fixture.sh; then
+if bash scripts/restore_fixture.sh > /dev/null 2>&1; then
   restore_status="ok"
 fi
 
 mkdir -p artifacts
-cat > artifacts/m06-verify.json <<EOF
+cat > artifacts/m07-verify.json <<EOF
 {
   "command": "make verify",
   "status": "${status}",
@@ -113,8 +154,8 @@ cat > artifacts/m06-verify.json <<EOF
 EOF
 
 if [ "$status" != "passed" ] || [ "$restore_status" != "ok" ]; then
-  echo "M06 verification failed" >&2
+  echo "M07 verification failed" >&2
   exit 1
 fi
 
-echo "M06 verification passed"
+echo "M07 verification passed"

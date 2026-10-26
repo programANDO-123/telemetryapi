@@ -28,7 +28,7 @@ public class EventService {
 
     public Event save(Event event) {
         String actorId = envOr("ACTOR_ID", "system");
-        String traceId = envOr("TRACE_ID", "m06-verify");
+        String traceId = envOr("TRACE_ID", "m07-verify");
 
         Set<ConstraintViolation<Event>> violations = validator.validate(event);
         if (!violations.isEmpty()) {
@@ -36,6 +36,23 @@ public class EventService {
                     event != null ? event.getEventId() : null, traceId,
                     "failed", "validation_error");
             throw new ConstraintViolationException(violations);
+        }
+
+        // M07: Compatibilidad v1 / v2
+        if (event.getSchemaVersion() == null) {
+            event.setSchemaVersion(1);
+        }
+
+        if (event.getSchemaVersion() == 1) {
+            // Un documento v1 no debe llevar campos de v2
+            event.setFirmwareVersion(null);
+            event.setQualityScore(null);
+        } else if (event.getSchemaVersion() == 2) {
+            // Valores por defecto para v2
+            if (event.getFirmwareVersion() == null)
+                event.setFirmwareVersion("unknown");
+            if (event.getQualityScore() == null)
+                event.setQualityScore(0.0);
         }
 
         Optional<Event> existing = repository.findByEventId(event.getEventId());
@@ -50,7 +67,14 @@ public class EventService {
     }
 
     public Optional<Event> findByEventId(String eventId) {
-        return repository.findByEventId(eventId);
+        return repository.findByEventId(eventId).map(this::normalize);
+    }
+
+    private Event normalize(Event event) {
+        if (event.getSchemaVersion() == null) {
+            event.setSchemaVersion(1);
+        }
+        return event;
     }
 
     public List<Event> findByTypeInRange(String type, String from, String to) {
@@ -63,7 +87,7 @@ public class EventService {
 
     public boolean deleteByEventId(String eventId) {
         String actorId = envOr("ACTOR_ID", "system");
-        String traceId = envOr("TRACE_ID", "m06-verify");
+        String traceId = envOr("TRACE_ID", "m07-verify");
 
         if (repository.existsByEventId(eventId)) {
             repository.deleteByEventId(eventId);
