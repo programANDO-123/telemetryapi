@@ -1,0 +1,19 @@
+{
+  "milestone": "m08-pagination-performance",
+  "commit": "PENDING_TAG",
+  "commands": [
+    "make setup",
+    "make verify"
+  ],
+  "results": {
+    "pagination": "pending",
+    "benchmark": "pending",
+    "tests": "pending"
+  },
+  "assumptions": [
+    "Pendiente"
+  ],
+  "limitations": [
+    "Pendiente"
+  ]
+}

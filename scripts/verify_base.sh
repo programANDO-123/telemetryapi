@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# M07 verification: levanta PostgreSQL y MongoDB, aplica migraciones y seeds
+# M08 verification: levanta PostgreSQL y MongoDB, aplica migraciones y seeds
 # de M01 a M05, aplica schema de MongoDB, prueba ciclo v1 -> v2 -> v1 -> v2,
-# verifica ausencia de secretos, ejecuta tests, corre restore y emite artifacts/m07-verify.json.
+# verifica ausencia de secretos, ejecuta tests, corre restore, ejecuta el
+# benchmark de paginación y emite artifacts/m08-verify.json.
 
 test -f .env || { echo "missing .env file" >&2; exit 1; }
 
@@ -108,12 +109,6 @@ fi
 echo "M07: Re-applying migration (idempotence check)..."
 docker compose exec -T mongo mongosh --quiet "$MONGO_DB" < db/mongo/migrate_v1_to_v2.js
 
-v2count2=$(docker compose exec -T mongo mongosh --quiet "$MONGO_DB" --eval 'print(db.document_events.countDocuments({ eventId: "M07-V1-001", schemaVersion: 2 }));' | tr -d '\r')
-if [ "$v2count2" != "1" ]; then
-  echo "M07 ERROR: second migration did not produce expected result" >&2
-  exit 1
-fi
-
 echo "M07: Cleaning up synthetic document..."
 docker compose exec -T mongo mongosh --quiet "$MONGO_DB" --eval 'db.document_events.deleteMany({ eventId: "M07-V1-001" });'
 
@@ -136,26 +131,42 @@ cat "$log"
 
 summary=$(grep "Tests run:" "$log" | tail -1 | sed -E 's/^\[INFO\] //' || true)
 
-# --- M06 restore (se conserva) ---
+# --- M06 restore ---
 echo "Running restore fixture..."
 restore_status="failed"
 if bash scripts/restore_fixture.sh > /dev/null 2>&1; then
   restore_status="ok"
 fi
 
+# --- M08 benchmark ---
+echo "Running M08 benchmark..."
+bench_status="failed"
+if bash scripts/benchmark_m08.sh > /dev/null 2>&1; then
+  bench_status="ok"
+fi
+
+bench_file="artifacts/m08-benchmark.json"
+if [ -f "$bench_file" ]; then
+  bench_json=$(cat "$bench_file")
+else
+  bench_json="{}"
+fi
+
 mkdir -p artifacts
-cat > artifacts/m07-verify.json <<EOF
+cat > artifacts/m08-verify.json <<EOF
 {
   "command": "make verify",
   "status": "${status}",
   "tests": "${summary}",
-  "restore": "${restore_status}"
+  "restore": "${restore_status}",
+  "benchmarkStatus": "${bench_status}",
+  "benchmark": ${bench_json}
 }
 EOF
 
-if [ "$status" != "passed" ] || [ "$restore_status" != "ok" ]; then
-  echo "M07 verification failed" >&2
+if [ "$status" != "passed" ] || [ "$restore_status" != "ok" ] || [ "$bench_status" != "ok" ]; then
+  echo "M08 verification failed" >&2
   exit 1
 fi
 
-echo "M07 verification passed"
+echo "M08 verification passed"

@@ -108,6 +108,17 @@ public class EventService {
         return repository.count();
     }
 
+    public List<Event> findPageByCursor(String afterTimestamp, int size) {
+        String cursor = (afterTimestamp == null || afterTimestamp.isBlank()) ? "" : afterTimestamp;
+        return repository.findByTimestampGreaterThanOrderByTimestampAsc(
+                cursor, org.springframework.data.domain.PageRequest.of(0, size));
+    }
+
+    public List<Event> findPageByOffset(int page, int size) {
+        return repository.findAllByOrderByTimestampAsc(
+                org.springframework.data.domain.PageRequest.of(page, size));
+    }
+
     private static String envOr(String name, String fallback) {
         String value = System.getenv(name);
         return (value == null || value.isBlank()) ? fallback : value;
