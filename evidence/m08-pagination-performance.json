@@ -1,0 +1,40 @@
+{
+  "milestone": "m08-pagination-performance",
+  "commit": "PENDING_TAG",
+  "commands": [
+    "make setup",
+    "make verify"
+  ],
+  "results": {
+    "pagination": "passed",
+    "benchmark": "passed",
+    "tests": "passed",
+    "testSummary": "Tests run: 45, Failures: 0, Errors: 0, Skipped: 0",
+    "benchmarkMetrics": {
+      "sample": 20,
+      "fixtures": 10000,
+      "environment": "docker-compose local",
+      "offset": {
+        "p50Ms": 7,
+        "p95Ms": 13
+      },
+      "cursor": {
+        "p50Ms": 2,
+        "p95Ms": 3
+      }
+    }
+  },
+  "assumptions": [
+    "La paginación por cursor (keyset) se ancla en el campo timestamp para mantener estabilidad ante inserciones.",
+    "La paginación por offset se conserva solo como línea base para el benchmark.",
+    "El benchmark corre localmente con 10,000 fixtures sintéticos y 20 iteraciones por técnica.",
+    "Los tests de M01-M07 se mantienen intactos y en verde.",
+    "MongoDB corre en Docker local y AWS no se usa en M08."
+  ],
+  "limitations": [
+    "M08 no expone API HTTP ni endpoints.",
+    "El benchmark se ejecuta en Docker local; los resultados no se extrapolan a producción cloud.",
+    "El tamaño de muestra es 20 iteraciones; no sustituye un benchmark de carga concurrente.",
+    "make verify y make run requieren Docker funcionando en la máquina."
+  ]
+}

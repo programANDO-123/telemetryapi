@@ -1,0 +1,1 @@
+{"sample":20,"fixtures":10000,"environment":"docker-compose local","offset":{"p50":7,"p95":13},"cursor":{"p50":2,"p95":3}}
