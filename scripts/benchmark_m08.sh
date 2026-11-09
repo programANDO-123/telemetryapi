@@ -1,9 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-#Benchmark: compara paginacion por offset vs cursor.
-# Inserta 10k fixtures, corre 20 iteraciones y emite p50/p95.
-
 test -f .env || { echo "missing .env file" >&2; exit 1; }
 
 set -a
@@ -15,7 +12,7 @@ mkdir -p artifacts
 
 echo "Running M08 benchmark..."
 
-docker compose exec -T mongo mongosh --quiet "$MONGO_DB" --eval '
+docker compose exec -T mongo mongosh -u "$MONGO_ROOT_USER" -p "$MONGO_ROOT_PASSWORD" --authenticationDatabase admin --quiet "$MONGO_DB" --eval '
   db.document_events.deleteMany({ type: "benchmark" });
 
   let docs = [];
@@ -70,7 +67,6 @@ docker compose exec -T mongo mongosh --quiet "$MONGO_DB" --eval '
   print("---END_BENCHMARK_JSON---");
 ' > /tmp/m08_bench_raw.txt
 
-# Extraer el JSON delimitado
 sed -n '/---BENCHMARK_JSON---/,/---END_BENCHMARK_JSON---/p' /tmp/m08_bench_raw.txt | sed '1d;$d' > artifacts/m08-benchmark.json
 
 cat artifacts/m08-benchmark.json
