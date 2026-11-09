@@ -13,6 +13,27 @@ set -a
 source .env
 set +a
 
+# Validate before starting containers or changing database state. Older .env files
+# may be missing the administrative connection and M09 actor credentials.
+required_env=(
+  POSTGRES_DB POSTGRES_USER POSTGRES_PASSWORD POSTGRES_PORT
+  MIGRATION_ROLE_PASSWORD WRITER_ROLE_PASSWORD READER_ROLE_PASSWORD OPERATOR_ROLE_PASSWORD
+  MONGO_ROOT_USER MONGO_ROOT_PASSWORD MONGO_ROOT_URI MONGO_URI MONGO_DB
+  MONGO_READER_USER MONGO_READER_PASSWORD MONGO_WRITER_USER MONGO_WRITER_PASSWORD
+  MONGO_VULN_USER MONGO_VULN_PASSWORD
+)
+missing_env=()
+for name in "${required_env[@]}"; do
+  if [[ -z "${!name:-}" ]]; then
+    missing_env+=("$name")
+  fi
+done
+if (( ${#missing_env[@]} > 0 )); then
+  printf 'Missing required env var: %s\n' "${missing_env[@]}" >&2
+  echo 'Complete .env using .env.example before running make verify.' >&2
+  exit 1
+fi
+
 docker compose up -d postgres mongo
 
 echo "Waiting for PostgreSQL..."
@@ -32,8 +53,11 @@ done
 
 echo "Waiting for MongoDB..."
 for i in $(seq 1 60); do
-  if docker compose exec -T mongo \
-       mongosh "mongodb://$MONGO_ROOT_USER:$MONGO_ROOT_PASSWORD@localhost:27017/admin" --quiet --eval "db.adminCommand('ping').ok" >/dev/null 2>&1; then
+  # Esperar al mongod definitivo, no al servidor temporal de docker-entrypoint.
+  # ping comprueba disponibilidad; la autenticación se verifica a continuación.
+  if docker compose exec -T mongo sh -c 'test "$(cat /proc/1/comm)" = mongod' >/dev/null 2>&1 &&
+     docker compose exec -T mongo mongosh --host 127.0.0.1 --port 27017 --quiet admin \
+       --eval 'quit(db.adminCommand({ ping: 1 }).ok === 1 ? 0 : 1)' >/dev/null 2>&1; then
     echo "MongoDB is ready."
     break
   fi
@@ -44,6 +68,12 @@ for i in $(seq 1 60); do
   fi
   sleep 1
 done
+
+# Recuperar el primer administrador en volúmenes sin usuarios, sin borrar datos.
+# Si ya existen usuarios, se exigen las credenciales administrativas originales.
+echo "Checking MongoDB administrative access..."
+docker compose exec -T mongo mongosh --host 127.0.0.1 --port 27017 --quiet admin \
+  --file /dev/stdin < db/mongo/bootstrap_admin.js
 
 # --- PostgreSQL M01-M05 ---
 docker compose exec -T postgres \
