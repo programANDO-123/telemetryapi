@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# M08 verification: levanta PostgreSQL y MongoDB, aplica migraciones y seeds
-# de M01 a M05, aplica schema de MongoDB, prueba ciclo v1 -> v2 -> v1 -> v2,
-# verifica ausencia de secretos, ejecuta tests, corre restore, ejecuta el
-# benchmark de paginación y emite artifacts/m08-verify.json.
+# M09 verification: levanta PostgreSQL y MongoDB, aplica migraciones y seeds
+# de M01 a M05, aplica schema de MongoDB, configura seguridad M09,
+# prueba ciclo v1 -> v2 -> v1 -> v2, verifica ausencia de secretos,
+# ejecuta tests, corre restore, ejecuta el benchmark y emite artifacts/m09-verify.json.
 
 test -f .env || { echo "missing .env file" >&2; exit 1; }
 
@@ -33,7 +33,7 @@ done
 echo "Waiting for MongoDB..."
 for i in $(seq 1 60); do
   if docker compose exec -T mongo \
-       mongosh --quiet --eval "db.adminCommand('ping').ok" >/dev/null 2>&1; then
+       mongosh "mongodb://$MONGO_ROOT_USER:$MONGO_ROOT_PASSWORD@localhost:27017/admin" --quiet --eval "db.adminCommand('ping').ok" >/dev/null 2>&1; then
     echo "MongoDB is ready."
     break
   fi
@@ -68,13 +68,15 @@ docker compose exec -T postgres \
 
 # --- MongoDB schema ---
 echo "Applying MongoDB schema..."
-docker compose exec -T mongo \
-  mongosh --quiet "$MONGO_DB" \
-  < db/mongo/schema.js
+docker compose exec -T mongo mongosh -u "$MONGO_ROOT_USER" -p "$MONGO_ROOT_PASSWORD" --authenticationDatabase admin --quiet "$MONGO_DB" < db/mongo/schema.js
+
+# --- M09: Seguridad ---
+echo "M09: Setting up MongoDB security..."
+docker compose exec -T mongo mongosh -u "$MONGO_ROOT_USER" -p "$MONGO_ROOT_PASSWORD" --authenticationDatabase admin --quiet "$MONGO_DB" < db/mongo/security_setup.js
 
 # --- M07: ciclo de migración y rollback ---
 echo "M07: Inserting v1 synthetic document..."
-docker compose exec -T mongo mongosh --quiet "$MONGO_DB" --eval '
+docker compose exec -T mongo mongosh -u "$MONGO_ROOT_USER" -p "$MONGO_ROOT_PASSWORD" --authenticationDatabase admin --quiet "$MONGO_DB" --eval '
   db.document_events.deleteMany({ eventId: "M07-V1-001" });
   db.document_events.insertOne({
     eventId: "M07-V1-001",
@@ -87,30 +89,30 @@ docker compose exec -T mongo mongosh --quiet "$MONGO_DB" --eval '
 '
 
 echo "M07: Applying migration v1 -> v2..."
-docker compose exec -T mongo mongosh --quiet "$MONGO_DB" < db/mongo/migrate_v1_to_v2.js
+docker compose exec -T mongo mongosh -u "$MONGO_ROOT_USER" -p "$MONGO_ROOT_PASSWORD" --authenticationDatabase admin --quiet "$MONGO_DB" < db/mongo/migrate_v1_to_v2.js
 
 echo "M07: Verifying v2 document exists..."
-v2count=$(docker compose exec -T mongo mongosh --quiet "$MONGO_DB" --eval 'print(db.document_events.countDocuments({ eventId: "M07-V1-001", schemaVersion: 2 }));' | tr -d '\r')
+v2count=$(docker compose exec -T mongo mongosh -u "$MONGO_ROOT_USER" -p "$MONGO_ROOT_PASSWORD" --authenticationDatabase admin --quiet "$MONGO_DB" --eval 'print(db.document_events.countDocuments({ eventId: "M07-V1-001", schemaVersion: 2 }));' | tr -d '\r')
 if [ "$v2count" != "1" ]; then
   echo "M07 ERROR: migration to v2 did not produce expected document" >&2
   exit 1
 fi
 
 echo "M07: Applying rollback v2 -> v1..."
-docker compose exec -T mongo mongosh --quiet "$MONGO_DB" < db/mongo/rollback_v2_to_v1.js
+docker compose exec -T mongo mongosh -u "$MONGO_ROOT_USER" -p "$MONGO_ROOT_PASSWORD" --authenticationDatabase admin --quiet "$MONGO_DB" < db/mongo/rollback_v2_to_v1.js
 
 echo "M07: Verifying document returned to v1..."
-v1count=$(docker compose exec -T mongo mongosh --quiet "$MONGO_DB" --eval 'print(db.document_events.countDocuments({ eventId: "M07-V1-001", schemaVersion: { $exists: false } }));' | tr -d '\r')
+v1count=$(docker compose exec -T mongo mongosh -u "$MONGO_ROOT_USER" -p "$MONGO_ROOT_PASSWORD" --authenticationDatabase admin --quiet "$MONGO_DB" --eval 'print(db.document_events.countDocuments({ eventId: "M07-V1-001", schemaVersion: { $exists: false } }));' | tr -d '\r')
 if [ "$v1count" != "1" ]; then
   echo "M07 ERROR: rollback to v1 did not restore document" >&2
   exit 1
 fi
 
 echo "M07: Re-applying migration (idempotence check)..."
-docker compose exec -T mongo mongosh --quiet "$MONGO_DB" < db/mongo/migrate_v1_to_v2.js
+docker compose exec -T mongo mongosh -u "$MONGO_ROOT_USER" -p "$MONGO_ROOT_PASSWORD" --authenticationDatabase admin --quiet "$MONGO_DB" < db/mongo/migrate_v1_to_v2.js
 
 echo "M07: Cleaning up synthetic document..."
-docker compose exec -T mongo mongosh --quiet "$MONGO_DB" --eval 'db.document_events.deleteMany({ eventId: "M07-V1-001" });'
+docker compose exec -T mongo mongosh -u "$MONGO_ROOT_USER" -p "$MONGO_ROOT_PASSWORD" --authenticationDatabase admin --quiet "$MONGO_DB" --eval 'db.document_events.deleteMany({ eventId: "M07-V1-001" });'
 
 # --- Secret scan ---
 echo "Checking for versioned secrets..."
@@ -153,7 +155,7 @@ else
 fi
 
 mkdir -p artifacts
-cat > artifacts/m08-verify.json <<EOF
+cat > artifacts/m09-verify.json <<EOF
 {
   "command": "make verify",
   "status": "${status}",
@@ -165,8 +167,8 @@ cat > artifacts/m08-verify.json <<EOF
 EOF
 
 if [ "$status" != "passed" ] || [ "$restore_status" != "ok" ] || [ "$bench_status" != "ok" ]; then
-  echo "M08 verification failed" >&2
+  echo "M09 verification failed" >&2
   exit 1
 fi
 
-echo "M08 verification passed"
+echo "M09 verification passed"

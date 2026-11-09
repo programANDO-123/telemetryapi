@@ -1,0 +1,20 @@
+{
+  "milestone": "m09-security-remediation",
+  "commit": "PENDING_TAG",
+  "commands": [
+    "make setup",
+    "make verify"
+  ],
+  "results": {
+    "controls": "pending",
+    "audit": "pending",
+    "remediation": "pending",
+    "tests": "pending"
+  },
+  "assumptions": [
+    "Pendiente"
+  ],
+  "limitations": [
+    "Pendiente"
+  ]
+}
