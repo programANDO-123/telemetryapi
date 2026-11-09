@@ -1,10 +1,8 @@
-// configuracion de roles y usuarios para M09
-// Usa roles personalizados para limitar el acceso por coleccion, evita readWrite global
-
+// Configuración de roles y usuarios para M09.
 const dbName = db.getName();
 
-// Rol de solo lectura
-if (!db.getRole("m09_reader_role")) {
+// 1. Rol de solo lectura para document_events
+try {
   db.createRole({
     role: "m09_reader_role",
     privileges: [
@@ -12,10 +10,10 @@ if (!db.getRole("m09_reader_role")) {
     ],
     roles: []
   });
-}
+} catch (e) { if (e.code !== 51002) throw e; } // 51002 = Role already exists
 
-//Rol de lectura/escritura
-if (!db.getRole("m09_writer_role")) {
+// 2. Rol de lectura/escritura solo para document_events
+try {
   db.createRole({
     role: "m09_writer_role",
     privileges: [
@@ -23,9 +21,9 @@ if (!db.getRole("m09_writer_role")) {
     ],
     roles: []
   });
-}
+} catch (e) { if (e.code !== 51002) throw e; }
 
-//Crear usuarios idemotente
+// 3. Crear usuarios
 try {
   db.createUser({
     user: "m09_reader",
@@ -42,11 +40,20 @@ try {
   });
 } catch (e) { if (e.code !== 51003) throw e; }
 
-// 4. Usuario vulnerable con permisos muchos
+// 4. Usuario vulnerable (con permisos excesivos)
 try {
   db.createUser({
     user: "m09_vuln",
     pwd: "vuln_pw_dev",
+    roles: [{ role: "readWrite", db: dbName }]
+  });
+} catch (e) { if (e.code !== 51003) throw e; }
+
+// 5. Usuario de aplicación para los tests normales (sin bypass de validación)
+try {
+  db.createUser({
+    user: "test_app",
+    pwd: "test_app_pw",
     roles: [{ role: "readWrite", db: dbName }]
   });
 } catch (e) { if (e.code !== 51003) throw e; }

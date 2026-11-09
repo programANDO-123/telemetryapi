@@ -29,7 +29,8 @@ class SecurityTest {
 
     @DynamicPropertySource
     static void mongoProps(DynamicPropertyRegistry registry) {
-        registry.add("spring.mongodb.uri", () -> requireEnv("MONGO_URI"));
+        // SecurityTest usa ROOT para poder manipular roles y colecciones
+        registry.add("spring.mongodb.uri", () -> requireEnv("MONGO_ROOT_URI"));
     }
 
     @Autowired
