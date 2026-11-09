@@ -1,0 +1,29 @@
+{
+  "milestone": "m09-security-remediation",
+  "commit": "PENDING_TAG",
+  "commands": [
+    "make setup",
+    "make verify"
+  ],
+  "results": {
+    "controls": "passed",
+    "audit": "passed",
+    "remediation": "passed",
+    "tests": "passed",
+    "testSummary": "Tests run: 49, Failures: 0, Errors: 0, Skipped: 0"
+  },
+  "assumptions": [
+    "MongoDB corre con autenticación habilitada (root bootstrap via bootstrap_admin.js).",
+    "Los roles m09_reader y m09_writer limitan el acceso solo a document_events.",
+    "El usuario m09_vuln se crea con permisos excesivos para simular el abuso.",
+    "La remediación revoca el rol readWrite del usuario vulnerable.",
+    "La auditoría registra actorId, action, entity, entityId, timestamp, traceId, result y reason, sin secretos.",
+    "Los tests usan test_app para operaciones normales y root para operaciones administrativas."
+  ],
+  "limitations": [
+    "M09 no expone API HTTP ni endpoints.",
+    "La seguridad se valida en entorno Docker local; no se usa AWS Academy.",
+    "La remediación es de revocación de permisos, no de reasignación a otro rol.",
+    "make verify y make run requieren Docker funcionando."
+  ]
+}

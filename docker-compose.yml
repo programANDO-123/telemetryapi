@@ -26,6 +26,8 @@ services:
   mongo:
     image: mongo:7
     environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER:-root}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-root_pw_dev}
       MONGO_INITDB_DATABASE: ${MONGO_DB:-cdrl_events}
     ports:
       - "${MONGO_PORT:-27017}:27017"
@@ -33,7 +35,19 @@ services:
       - mongo_data:/data/db
     healthcheck:
       test:
-        ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+        - CMD
+        - mongosh
+        - --quiet
+        - --host
+        - 127.0.0.1
+        - --port
+        - "27017"
+        - admin
+        - --eval
+        - >-
+          if (!db.auth(process.env.MONGO_INITDB_ROOT_USERNAME,
+          process.env.MONGO_INITDB_ROOT_PASSWORD)) quit(1);
+          quit(db.adminCommand({ ping: 1 }).ok === 1 ? 0 : 1);
       interval: 5s
       timeout: 5s
       retries: 10

@@ -1,9 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Recuperación de fixture sintético para document_events.
-# Flujo: falla controlada -> restore -> verificación -> medición (RPO/RTO/SLO).
-
 test -f .env || { echo "missing .env file" >&2; exit 1; }
 
 set -a
@@ -16,13 +13,13 @@ EXPECTED=3
 SLO_SECONDS=5
 
 count_fixture() {
-  docker compose exec -T mongo mongosh --quiet "$MONGO_DB" --eval "
+  docker compose exec -T mongo mongosh -u "$MONGO_ROOT_USER" -p "$MONGO_ROOT_PASSWORD" --authenticationDatabase admin --quiet "$MONGO_DB" --eval "
     print(db.document_events.countDocuments({ eventId: { \$in: ['${FIXTURE_IDS[0]}', '${FIXTURE_IDS[1]}', '${FIXTURE_IDS[2]}'] } }));
   " | tr -d '\r'
 }
 
 echo ">> Step 1: Falla controlada (borrando fixture)"
-docker compose exec -T mongo mongosh --quiet "$MONGO_DB" --eval "
+docker compose exec -T mongo mongosh -u "$MONGO_ROOT_USER" -p "$MONGO_ROOT_PASSWORD" --authenticationDatabase admin --quiet "$MONGO_DB" --eval "
   db.document_events.deleteMany({ eventId: { \$in: ['${FIXTURE_IDS[0]}', '${FIXTURE_IDS[1]}', '${FIXTURE_IDS[2]}'] } });
   print('fixture eliminado');
 " > /dev/null
@@ -33,7 +30,7 @@ rpo_lost=$((EXPECTED - before))
 echo ">> Step 2: Restore (reinsertando fixture)"
 start=$(date +%s)
 
-docker compose exec -T mongo mongosh --quiet "$MONGO_DB" --eval "
+docker compose exec -T mongo mongosh -u "$MONGO_ROOT_USER" -p "$MONGO_ROOT_PASSWORD" --authenticationDatabase admin --quiet "$MONGO_DB" --eval "
   db.document_events.insertMany([
     { eventId: '${FIXTURE_IDS[0]}', type: 'restore.test', source: 'restore-script', timestamp: '2026-10-09T00:00:00Z', payload: { note: 'fixture-1' }, schemaVersion: 2 },
     { eventId: '${FIXTURE_IDS[1]}', type: 'restore.test', source: 'restore-script', timestamp: '2026-10-09T00:01:00Z', payload: { note: 'fixture-2' }, schemaVersion: 2 },
